@@ -86,12 +86,17 @@ agent_app = workflow.compile(checkpointer=memory_saver)
 
 if __name__ == "__main__":
     # Isolate conversation flow with a unique thread session ID
-    config = {"configurable": {"thread_id": "azure-to-aws-env-session-888"}}
+    config = {
+        "configurable": {
+            "thread_id": "azure-to-aws-env-session-888",
+            "actor_id": "user-muneer-ahmed"  # Added actor_id to satisfy AWS AgentCore
+        }
+    }
 
     print("--- Starting Turn 1 (Calling Azure OpenAI via .env settings) ---")
     turn_1_input = {
         "messages": [
-            HumanMessage(content="Hello! This script uses my local .env file. Remember my favorite color is orange.")
+            HumanMessage(content="Hello! Remember my favorite color is orange.")
         ]
     }
 
