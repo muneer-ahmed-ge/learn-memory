@@ -25,7 +25,7 @@ from langgraph_checkpoint_aws import AgentCoreMemorySaver
 # Fetch configurations directly from the environment variables loaded from .env
 AZURE_DEPLOYMENT_NAME = os.getenv("AZURE_DEPLOYMENT_NAME")
 AWS_MEMORY_ID = os.getenv("AWS_MEMORY_ID")
-AWS_REGION = os.getenv("AWS_DEFAULT_REGION", "us-west-2")
+AWS_REGION = os.getenv("AWS_DEFAULT_REGION")
 
 # Instantiate Azure OpenAI Model Client
 # The SDK automatically detects AZURE_OPENAI_API_KEY, AZURE_OPENAI_ENDPOINT, and AZURE_OPENAI_API_VERSION from your environment
@@ -33,15 +33,6 @@ llm = AzureChatOpenAI(
     azure_deployment=AZURE_DEPLOYMENT_NAME,
     temperature=0.5
 )
-
-AWS_REGION = "us-east-1"
-
-aws_session = boto3.Session(
-    profile_name="140526468817_smaxai-architect-admins",
-    region_name=AWS_REGION
-)
-
-custom_data_client = aws_session.client('bedrock-agentcore', region_name=AWS_REGION)
 
 # Instantiate the AWS AgentCore Checkpointer
 # The underlying boto3 client automatically uses AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY from your environment
