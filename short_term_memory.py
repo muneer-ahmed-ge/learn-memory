@@ -1,10 +1,16 @@
 import os
-import boto3
 from typing import Annotated
 from typing_extensions import TypedDict
 
 # 1. LOAD ENVIRONMENT VARIABLES FIRST
 from dotenv import load_dotenv
+
+import logging
+logging.getLogger("openai").propagate = False
+logging.getLogger("httpx").propagate = False
+logging.getLogger("openai").setLevel(logging.CRITICAL)
+logging.getLogger("httpx").setLevel(logging.CRITICAL)
+logging.getLogger("httpcore").setLevel(logging.CRITICAL)
 
 load_dotenv()  # This reads the local .env file
 
