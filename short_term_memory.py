@@ -1,4 +1,5 @@
 import os
+import uuid
 from typing import Annotated
 from typing_extensions import TypedDict
 
@@ -73,8 +74,24 @@ prompt_template = ChatPromptTemplate.from_messages([
 
 # Node executing the Azure OpenAI invocation chain
 def call_agent_model(state: AgentState):
+    # 1. Grab the full list of messages that the AWS interceptor just fetched
+    fetched_messages = state["messages"]
+
+    # print("\n================ [DEBUG: MEMORY FETCH & PROMPT INJECTION] ================")
+    # print(f"Total Messages rehydrated from AWS Bedrock: {len(fetched_messages)}")
+    # print("-------------------------------------------------------------------------")
+    #
+    # # Loop through and print what is about to be sent to the LLM prompt layout
+    # for idx, msg in enumerate(fetched_messages):
+    #     # Identify the sender type (HumanMessage vs AIMessage)
+    #     sender = "USER" if msg.type == "human" else "AI"
+    #     print(f"[{idx}] {sender}: {msg.content}")
+    #
+    # print("=========================================================================\n")
+
+    # 2. Proceed with the normal LLM network call
     chain = prompt_template | llm
-    response = chain.invoke({"messages": state["messages"]})
+    response = chain.invoke({"messages": fetched_messages})
     return {"messages": [response]}
 
 
@@ -92,11 +109,13 @@ agent_app = workflow.compile(checkpointer=memory_saver)
 # ==========================================
 
 if __name__ == "__main__":
-    # Isolate conversation flow with a unique thread session ID
+    # Generate a brand new, random session ID for this specific run
+    unique_session_id = f"session-{uuid.uuid4().hex[:8]}"
+
     config = {
         "configurable": {
-            "thread_id": "azure-to-aws-env-session-888",
-            "actor_id": "user-muneer-ahmed"  # Added actor_id to satisfy AWS AgentCore
+            "thread_id": unique_session_id,  # Fresh partition in AWS Memory Store
+            "actor_id": "user-muneer-ahmed"
         }
     }
 
