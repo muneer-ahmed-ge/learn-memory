@@ -1,4 +1,5 @@
 import os
+import boto3
 from typing import Annotated
 from typing_extensions import TypedDict
 
@@ -32,6 +33,15 @@ llm = AzureChatOpenAI(
     azure_deployment=AZURE_DEPLOYMENT_NAME,
     temperature=0.5
 )
+
+AWS_REGION = "us-east-1"
+
+aws_session = boto3.Session(
+    profile_name="140526468817_smaxai-architect-admins",
+    region_name=AWS_REGION
+)
+
+custom_data_client = aws_session.client('bedrock-agentcore', region_name=AWS_REGION)
 
 # Instantiate the AWS AgentCore Checkpointer
 # The underlying boto3 client automatically uses AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY from your environment
