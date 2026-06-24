@@ -10,7 +10,7 @@ https://github.com/awslabs/agentcore-samples/tree/main/06-workshops/04-AgentCore
 
 Long Term Memory
 ----------------
-
+https://github.com/awslabs/agentcore-samples/tree/main/06-workshops/04-AgentCore-memory/02-long-term-memory
 
 https://github.com/awslabs/agentcore-samples/tree/main/06-workshops/04-AgentCore-memory
 
