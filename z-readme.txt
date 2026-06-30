@@ -1,5 +1,7 @@
 https://servicemax.atlassian.net/wiki/spaces/~564362800/pages/5983666283/Memory+and+Learning
 
+what shirt color should I wear
+
 https://github.com/jritsema/agentcore-memory-explorer
 /Users/muahmed/MT/ai/agentcore-memory-explorer
 run.sh

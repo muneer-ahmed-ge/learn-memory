@@ -163,8 +163,8 @@ def main():
     # Load any prior history for this actor/session (will be empty for a new session)
     history = load_history(actor_id, session_id)
 
+    user_message = "what shirt color should I wear"
     while True:
-        user_message = input("\nYou: ").strip()
         if user_message == "0":
             print("Session ended.")
             break
@@ -188,6 +188,8 @@ def main():
             save_turn(actor_id, session_id, user_message, reply)
         except Exception as e:
             print(f"[warning] Failed to save turn to memory: {e}")
+
+        user_message = input("\nYou: ").strip()
 
 
 if __name__ == "__main__":
