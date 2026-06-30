@@ -10,6 +10,11 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+logging.basicConfig(level=logging.WARNING)
+logging.getLogger("botocore").setLevel(logging.WARNING)
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+logging.getLogger("openai").setLevel(logging.WARNING)
+
 MEMORY_ARN = os.getenv("AWS_MEMORY_ID")
 AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
 AZURE_DEPLOYMENT_NAME = os.getenv("AZURE_DEPLOYMENT_NAME")
@@ -18,16 +23,20 @@ AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY")
 AWS_MEMORY_ID = os.getenv("AWS_MEMORY_ID")
 AWS_REGION = os.getenv("AWS_DEFAULT_REGION")
 
-# AWS Bedrock AgentCore Memory client
-boto3.set_stream_logger("botocore", level=logging.DEBUG)
-memory_client = boto3.client("bedrock-agentcore", region_name=AWS_REGION)
+memory_client = boto3.client("bedrock-agentcore", region_name="us-east-1")
 
 
 def log_aws_call(request, **kwargs):
-    print(f"\n>>> AWS CALL: {request.method} {request.url}")
-    if request.body:
-        body = request.body if isinstance(request.body, str) else request.body.decode("utf-8", errors="replace")
-        print(f"    Body: {body[:500]}")
+    """Print only the JSON request payload sent to AWS."""
+    if not request.body:
+        return
+    body = request.body if isinstance(request.body, str) else request.body.decode("utf-8", errors="replace")
+    try:
+        parsed = json.loads(body)
+        print(json.dumps(parsed, indent=2))
+    except json.JSONDecodeError:
+        print(body)
+
 
 memory_client.meta.events.register("before-send.bedrock-agentcore.*", log_aws_call)
 
