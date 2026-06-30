@@ -3,21 +3,33 @@ import time
 import json
 import boto3
 import uuid
+import logging
 from openai import AzureOpenAI
 
 from dotenv import load_dotenv
+
 load_dotenv()
 
-MEMORY_ARN=os.getenv("AWS_MEMORY_ID")
-AZURE_OPENAI_ENDPOINT=os.getenv("AZURE_OPENAI_ENDPOINT")
+MEMORY_ARN = os.getenv("AWS_MEMORY_ID")
+AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
 AZURE_DEPLOYMENT_NAME = os.getenv("AZURE_DEPLOYMENT_NAME")
 AZURE_OPENAI_API_VERSION = os.getenv("AZURE_OPENAI_API_VERSION")
-AZURE_OPENAI_API_KEY=os.getenv("AZURE_OPENAI_API_KEY")
+AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY")
 AWS_MEMORY_ID = os.getenv("AWS_MEMORY_ID")
 AWS_REGION = os.getenv("AWS_DEFAULT_REGION")
 
 # AWS Bedrock AgentCore Memory client
+boto3.set_stream_logger("botocore", level=logging.DEBUG)
 memory_client = boto3.client("bedrock-agentcore", region_name=AWS_REGION)
+
+
+def log_aws_call(request, **kwargs):
+    print(f"\n>>> AWS CALL: {request.method} {request.url}")
+    if request.body:
+        body = request.body if isinstance(request.body, str) else request.body.decode("utf-8", errors="replace")
+        print(f"    Body: {body[:500]}")
+
+memory_client.meta.events.register("before-send.bedrock-agentcore.*", log_aws_call)
 
 # Azure OpenAI client (just for inference, no memory logic here)
 model = AzureOpenAI(
