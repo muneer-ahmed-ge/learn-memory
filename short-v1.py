@@ -91,17 +91,56 @@ def save_turn(actor_id, session_id, user_message, assistant_reply):
     )
 
 
+def retrieve_memories(actor_id, query, max_results=5):
+    """Search extracted long-term memory records using semantic search."""
+    namespace = f"/strategies/preference_builtin_tk5kv-wvtf58AZmj/actors/{actor_id}/"
+    try:
+        resp = memory_client.retrieve_memory_records(
+            memoryId=MEMORY_ARN,
+            namespace=namespace,
+            searchCriteria={
+                "searchQuery": query,
+                "topK": max_results,
+            },
+        )
+        summaries = resp.get("memoryRecordSummaries", [])
+        print(f"\n>>> Retrieved {len(summaries)} memory record(s):")
+        print(json.dumps(summaries, indent=2, default=str))
+        return summaries
+    except Exception as e:
+        print(f"[warning] Failed to retrieve memory records: {e}")
+        return []
+
+
 def chat(actor_id, session_id, user_message, history):
-    """Send one turn to Azure OpenAI, using the running in-memory history."""
-    messages = history + [{"role": "user", "content": user_message}]
+    """Send one turn to Azure OpenAI, using both short-term history and long-term memory."""
+
+    resp = memory_client.list_memory_extraction_jobs(memoryId=MEMORY_ARN)
+    print(json.dumps(resp, indent=2, default=str))
+
+    # 1. Retrieve relevant long-term facts based on the current message
+    memories = retrieve_memories(actor_id, query=user_message, max_results=5)
+
+    # 2. Turn them into a system prompt
+    system_message = None
+    if memories:
+        facts = "\n".join(f"- {m.get('content', {}).get('text', '')}" for m in memories)
+        system_message = {
+            "role": "system",
+            "content": f"Known facts about this user from previous conversations:\n{facts}",
+        }
+
+    # 3. Build the full message list: system facts + short-term turn history + new message
+    messages = ([system_message] if system_message else []) + history + [
+        {"role": "user", "content": user_message}
+    ]
 
     response = model.chat.completions.create(
         model=AZURE_DEPLOYMENT_NAME,
         messages=messages,
         temperature=0.5,
     )
-    reply = response.choices[0].message.content
-    return reply
+    return response.choices[0].message.content
 
 
 def main():
