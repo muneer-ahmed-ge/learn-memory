@@ -78,21 +78,19 @@ def load_history(actor_id, session_id):
 
 
 def save_turn(actor_id, session_id, user_message, assistant_reply):
-    """Persist both sides of a turn in a single CreateEvent call."""
     memory_client.create_event(
         memoryId=MEMORY_ARN,
         actorId=actor_id,
         sessionId=session_id,
         eventTimestamp=time.time(),
         payload=[
-            {"blob": json.dumps({"role": "user", "content": user_message})},
-            {"blob": json.dumps({"role": "assistant", "content": assistant_reply})},
+            {"conversational": {"content": {"text": user_message}, "role": "USER"}},
+            {"conversational": {"content": {"text": assistant_reply}, "role": "ASSISTANT"}},
         ],
     )
 
 
 def retrieve_memories(actor_id, query, max_results=5):
-    """Search extracted long-term memory records using semantic search."""
     namespace = f"/strategies/preference_builtin_tk5kv-wvtf58AZmj/actors/{actor_id}/"
     try:
         resp = memory_client.retrieve_memory_records(
@@ -104,36 +102,45 @@ def retrieve_memories(actor_id, query, max_results=5):
             },
         )
         summaries = resp.get("memoryRecordSummaries", [])
-        print(f"\n>>> Retrieved {len(summaries)} memory record(s):")
-        print(json.dumps(summaries, indent=2, default=str))
-        return summaries
+
+        facts = []
+        for record in summaries:
+            raw_text = record.get("content", {}).get("text", "")
+            try:
+                parsed = json.loads(raw_text)
+                facts.append(parsed.get("preference", raw_text))
+            except json.JSONDecodeError:
+                facts.append(raw_text)
+
+        print(f"\n>>> Retrieved {len(facts)} memory fact(s): {facts}")
+        return facts
     except Exception as e:
         print(f"[warning] Failed to retrieve memory records: {e}")
         return []
 
 
 def chat(actor_id, session_id, user_message, history):
-    """Send one turn to Azure OpenAI, using both short-term history and long-term memory."""
+    facts = retrieve_memories(actor_id, query=user_message, max_results=5)
 
-    resp = memory_client.list_memory_extraction_jobs(memoryId=MEMORY_ARN)
-    print(json.dumps(resp, indent=2, default=str))
-
-    # 1. Retrieve relevant long-term facts based on the current message
-    memories = retrieve_memories(actor_id, query=user_message, max_results=5)
-
-    # 2. Turn them into a system prompt
     system_message = None
-    if memories:
-        facts = "\n".join(f"- {m.get('content', {}).get('text', '')}" for m in memories)
+    if facts:
+        fact_lines = "\n".join(f"- {f}" for f in facts)
         system_message = {
             "role": "system",
-            "content": f"Known facts about this user from previous conversations:\n{facts}",
+            "content": f"Known facts about this user:\n{fact_lines}",
         }
 
-    # 3. Build the full message list: system facts + short-term turn history + new message
-    messages = ([system_message] if system_message else []) + history + [
+    # Defensive: ensure every history item is a proper dict
+    clean_history = [
+        m for m in history
+        if isinstance(m, dict) and "role" in m and "content" in m
+    ]
+
+    messages = ([system_message] if system_message else []) + clean_history + [
         {"role": "user", "content": user_message}
     ]
+
+    print(json.dumps(messages, indent=2))  # debug: see exactly what's being sent
 
     response = model.chat.completions.create(
         model=AZURE_DEPLOYMENT_NAME,
@@ -144,7 +151,8 @@ def chat(actor_id, session_id, user_message, history):
 
 
 def main():
-    actor_id = input("Enter your name (used as actor id): ").strip().replace(" ", "-").lower()
+    # actor_id = input("Enter your name (used as actor id): ").strip().replace(" ", "-").lower()
+    actor_id = "MA"
     session_id = f"session-{uuid.uuid4().hex[:8]}"
 
     print("=" * 50)
